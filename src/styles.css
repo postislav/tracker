@@ -470,6 +470,31 @@ td:first-child {
   font-weight: 700;
 }
 
+.pack-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pack-editor input {
+  width: 76px;
+  min-height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: #172033;
+  background: #ffffff;
+}
+
+.pack-editor input:focus {
+  border-color: #2563eb;
+  outline: 2px solid #bfdbfe;
+}
+
+.pack-editor span {
+  color: #64748b;
+}
+
 tr:last-child td {
   border-bottom: 0;
 }
@@ -592,5 +617,9 @@ tr:last-child td {
     content: attr(data-label);
     color: #64748b;
     font-weight: 600;
+  }
+
+  .pack-editor input {
+    width: 92px;
   }
 }

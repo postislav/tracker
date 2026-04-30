@@ -104,6 +104,7 @@ let day = safeReadDay();
 let done = safeReadDone(day);
 
 const root = document.getElementById("root");
+const packStorageKey = "supplement-tracker-pack-sizes";
 
 function storageKey(currentDay) {
   return `supplement-tracker-day-${currentDay}`;
@@ -120,6 +121,21 @@ function safeReadDone(currentDay) {
   } catch {
     return {};
   }
+}
+
+function safeReadPackSizes() {
+  try {
+    return JSON.parse(localStorage.getItem(packStorageKey) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function savePackSize(name, pack) {
+  const packSizes = safeReadPackSizes();
+  packSizes[name] = pack;
+  localStorage.setItem(packStorageKey, JSON.stringify(packSizes));
+  render();
 }
 
 function escapeHtml(value) {
@@ -204,17 +220,17 @@ function getUsedByChecks() {
 
 function getShopping() {
   const usedByChecks = getUsedByChecks();
+  const packSizes = safeReadPackSizes();
 
   return initialItems.map((item) => {
+    const pack = Number(packSizes[item.name] || item.pack);
     const start = item.startDay || 1;
-    const daysUsed = Math.max(0, day - start + 1);
-    const used = daysUsed * item.daily;
     const checkedUsed = usedByChecks[item.name] || 0;
-    const remaining = item.pack - used;
+    const remaining = pack - checkedUsed;
     const daysLeft = remaining > 0 ? Math.floor(remaining / item.daily) : 0;
-    const reorderDay = Math.max(start, start + Math.floor(item.pack / item.daily) - REORDER_BUFFER_DAYS);
-    const packsFor90 = Math.ceil(((PROGRAM_DAYS - start + 1) * item.daily) / item.pack);
-    return { ...item, checkedUsed, remaining, daysLeft, reorderDay, packsFor90 };
+    const reorderDay = Math.max(start, start + Math.floor(pack / item.daily) - REORDER_BUFFER_DAYS);
+    const packsFor90 = Math.ceil(((PROGRAM_DAYS - start + 1) * item.daily) / pack);
+    return { ...item, pack, checkedUsed, remaining, daysLeft, reorderDay, packsFor90 };
   });
 }
 
@@ -301,7 +317,7 @@ function render() {
           <div class="card-content note-card">
             <p>
               Данные сохраняются в браузере на этом устройстве. Если открыть сайт на другом телефоне или компьютере,
-              отметки нужно будет вести отдельно. Количество в упаковках можно изменить в коде в блоке <b>initialItems</b>.
+              отметки и размеры упаковок нужно будет вести отдельно.
             </p>
           </div>
         </section>
@@ -380,7 +396,12 @@ function renderShoppingRow(item) {
   return `
     <tr>
       <td data-label="Препарат">${escapeHtml(item.name)}</td>
-      <td data-label="1 упаковка">${item.pack} ${escapeHtml(item.unit)}</td>
+      <td data-label="1 упаковка">
+        <label class="pack-editor">
+          <input type="number" min="1" step="1" value="${item.pack}" data-action="edit-pack" data-name="${escapeHtml(item.name)}" aria-label="Количество в упаковке: ${escapeHtml(item.name)}" />
+          <span>${escapeHtml(item.unit)}</span>
+        </label>
+      </td>
       <td data-label="Расход/день">${item.daily} ${escapeHtml(item.unit)}</td>
       <td data-label="Использовано">${item.checkedUsed} ${escapeHtml(item.unit)}</td>
       <td data-label="Осталось" class="${isLow ? "low-stock" : ""}">${Math.max(0, item.remaining)} ${escapeHtml(item.unit)} / ~${Math.max(0, item.daysLeft)} дн.</td>
@@ -400,6 +421,14 @@ root.addEventListener("click", (event) => {
   if (action === "reset-day") resetDay();
   if (action === "toggle-item") toggleItem(control.dataset.name);
   if (action === "toggle-schedule-item") toggleScheduleItem(control.dataset.key);
+});
+
+root.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-action='edit-pack']");
+  if (!input) return;
+
+  const pack = Math.max(1, Math.round(Number(input.value) || 1));
+  savePackSize(input.dataset.name, pack);
 });
 
 render();
